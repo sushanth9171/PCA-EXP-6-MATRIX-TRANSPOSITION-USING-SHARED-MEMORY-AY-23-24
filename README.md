@@ -1,7 +1,10 @@
 # PCA-EXP-6-MATRIX-TRANSPOSITION-USING-SHARED-MEMORY-AY-23-24
 <h3>AIM:</h3>
 <h3>ENTER YOUR NAME</h3>
-<h3>ENTER YOUR REGISTER NO</h3>
+G Sushanth
+
+<h3>ENTER YOUR REGISTER NO</h3>  212225230088
+
 <h3>EX. NO</h3>
 <h3>DATE</h3>
 <h1> <align=center> MATRIX TRANSPOSITION USING SHARED MEMORY </h3>
@@ -61,10 +64,128 @@ Google Colab with NVCC Compiler
 16. End of Algorithm
 
 ## PROGRAM:
-TYPE YOUR CODE HERE
+```
+#include <stdio.h>
+#include <cuda_runtime.h>
+
+#define BDIMX 4
+#define BDIMY 4
+
+__global__ void setRowReadRow(int *C)
+{
+    __shared__ int tile[BDIMY][BDIMX];
+
+    int idx = threadIdx.y * blockDim.x + threadIdx.x;
+
+    tile[threadIdx.y][threadIdx.x] = idx;
+
+    __syncthreads();
+
+    C[idx] = tile[threadIdx.y][threadIdx.x];
+}
+
+__global__ void setRowReadCol(int *C)
+{
+    __shared__ int tile[BDIMY][BDIMX];
+
+    int idx = threadIdx.y * blockDim.x + threadIdx.x;
+
+    tile[threadIdx.y][threadIdx.x] = idx;
+
+    __syncthreads();
+
+    C[idx] = tile[threadIdx.x][threadIdx.y];
+}
+
+int main()
+{
+    int size = BDIMX * BDIMY;
+
+    int *d_C;
+    int *gpuRef;
+
+    gpuRef = (int *)malloc(size * sizeof(int));
+
+    cudaMalloc((void **)&d_C, size * sizeof(int));
+
+    dim3 block(BDIMX, BDIMY);
+    dim3 grid(1, 1);
+
+    cudaEvent_t start, stop;
+    float elapsedTime;
+
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaMemset(d_C, 0, size * sizeof(int));
+
+    cudaEventRecord(start);
+
+    setRowReadRow<<<grid, block>>>(d_C);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    cudaEventElapsedTime(&elapsedTime, start, stop);
+
+    cudaMemcpy(gpuRef, d_C, size * sizeof(int),
+               cudaMemcpyDeviceToHost);
+
+    printf("setRowReadRow Output:\n");
+
+    for (int i = 0; i < BDIMY; i++)
+    {
+        for (int j = 0; j < BDIMX; j++)
+        {
+            printf("%d ", gpuRef[i * BDIMX + j]);
+        }
+        printf("\n");
+    }
+
+    printf("setRowReadRow Elapsed Time: %f ms\n", elapsedTime);
+
+    cudaMemset(d_C, 0, size * sizeof(int));
+
+    cudaEventRecord(start);
+
+    setRowReadCol<<<grid, block>>>(d_C);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    cudaEventElapsedTime(&elapsedTime, start, stop);
+
+    cudaMemcpy(gpuRef, d_C, size * sizeof(int),
+               cudaMemcpyDeviceToHost);
+
+    printf("\nsetRowReadCol Output:\n");
+
+    for (int i = 0; i < BDIMY; i++)
+    {
+        for (int j = 0; j < BDIMX; j++)
+        {
+            printf("%d ", gpuRef[i * BDIMX + j]);
+        }
+        printf("\n");
+    }
+
+    printf("setRowReadCol Elapsed Time: %f ms\n", elapsedTime);
+
+    cudaFree(d_C);
+    free(gpuRef);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+
+    cudaDeviceReset();
+
+    return 0;
+}
+```
+
 
 ## OUTPUT:
-SHOW YOUR OUTPUT HERE
+<img width="440" height="301" alt="643985178-3f9f7b66-9374-4686-9205-6680f0c48bd9" src="https://github.com/user-attachments/assets/ceeb314b-c447-4d65-be66-451143e31e17" />
 
 ## RESULT:
-Thus the program has been executed by using CUDA to transpose a matrix. It is observed that there are variations shared memory and global memory implementation. The elapsed times are recorded as _______________.
+ Thus, the program has been successfully executed using CUDA to transpose a matrix using shared memory. Two shared memory access patterns, setRowReadRow and setRowReadCol, were implemented. The elapsed times were recorded as 96.898941 ms and 0.044192 ms, respectively. It is observed that different shared memory access patterns result in variations in execution time.
